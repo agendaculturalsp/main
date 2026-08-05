@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda Cultural — Centro de São Paulo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root {
+    --color-bg: #f3f2f2;
+    --color-surface: #eae9e9;
+    --color-text: #201e1d;
+    --color-accent: #ec3013;
+    --color-divider: rgba(32, 30, 29, 0.4);
+    --color-neutral-200: #eae7e7;
+    --color-neutral-400: #bab6b6;
+    --color-neutral-700: #605d5d;
+    --color-neutral-800: #444141;
+    --color-neutral-900: #201e1d;
+    --color-accent-100: #fff2ef;
+    --color-accent-400: #ff9783;
+    --color-accent-700: #ae1800;
+    --font-heading: 'Archivo', system-ui, sans-serif;
+    --font-body: 'Archivo', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+  h1, h2, h3 { font-family: var(--font-heading); font-weight: 800; margin: 0; }
+  a { color: var(--color-accent-700); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+
+// ---------------------------------------------------------------------------
+// DADOS DA AGENDA — este bloco é o que é reescrito a cada atualização pedida
+// no chat. Estrutura estável: não mude os "id" para não perder favoritos.
+// ---------------------------------------------------------------------------
+const MONTH_LABEL = "Agosto";
+const YEAR_LABEL = "2026";
+const LAST_UPDATED = "05/08/2026";
+
+const WATCHLIST = [
+  { name: "Vila Itororó", note: "Agosto ainda não publicado.", url: "https://vilaitororo.prefeitura.sp.gov.br/programacao/" },
+  { name: "Galeria Metrópole", note: "Sem agenda pública fora do Instagram.", url: "https://www.instagram.com/galeriametropole.sp/" },
+  { name: "Sesc 14 Bis — Amanda Maria, Luccas Carlos, Mariana Aydar, Antonio Pinto", note: "Datas encontradas não batem com o calendário de 2026.", url: "https://www.sescsp.org.br/unidades/14bis/" },
+  { name: "Cine Joia — line-up completo", note: "Bloqueado por proteção anti-bot no site oficial.", url: "https://www.cinejoia.com.br/agenda/" },
+  { name: "Cinemateca Brasileira", note: "Não pesquisada nesta rodada.", url: "https://cinemateca.org.br/programacao/" },
+  { name: "Mundo Pensante", note: "Não pesquisado nesta rodada.", url: "https://www.mundopensante.com.br/" },
+  { name: "Feiras — Jabuticaba, Gengibrão, Barbotina, feiras do livro/zines", note: "Datas de agosto não confirmadas.", url: "" },
+  { name: "Tomie Ohtake, Museu da Língua Portuguesa, Farol Santander, Auditório do Ibirapuera, Museu Afro Brasil, Ouro Velho/Ugra", note: "Não pesquisados nesta rodada.", url: "" },
+];
+
+const CATEGORY_STYLES = {
+  musica: { label: "Música", bg: "var(--color-neutral-200)", fg: "var(--color-neutral-800)" },
+  teatro: { label: "Teatro/Dança", bg: "var(--color-neutral-800)", fg: "var(--color-bg)" },
+  expo: { label: "Exposição", bg: "var(--color-accent-100)", fg: "var(--color-accent-700)" },
+  cinema: { label: "Cinema", bg: "var(--color-neutral-200)", fg: "var(--color-neutral-800)" },
+  feira: { label: "Feira/Festival", bg: "var(--color-neutral-800)", fg: "var(--color-bg)" },
+};
+
+const WEEKS = [
+  {
+    id: "w1", label: "Semana 1", range: "1 – 7 ago",
+    events: [
+      { id: "e-belenzinho-abertura", date: "Sáb 01", title: "Plastique Noir + Ave Sangria", venue: "Sesc Belenzinho", cat: "musica", desc: "Plastique Noir estreia faixas inéditas do álbum 'Orla Brutal' (previsto para o 2º semestre) na Comedoria; no Teatro, Ave Sangria revisita o rock psicodélico brasileiro.", highlight: false },
+      { id: "e-osesp-korngold", date: "Sáb 01", title: "Osesp — Korngold & Bacewicz", venue: "Sala São Paulo", cat: "musica", desc: "Roberto González-Monjas rege obras de Korngold, com o violinista Inmo Yang, e a Sinfonia nº 4 de Bacewicz.", highlight: false },
+      { id: "e-demonios-garoa", date: "Dom 02", title: "Demônios da Garoa — 80 anos", venue: "Sesc Belenzinho", cat: "musica", desc: "Grupo histórico do samba paulistano celebra 80 anos com repertório ligado a Adoniran Barbosa.", highlight: false },
+      { id: "e-jazzb-paulistanea", date: "Dom 02", title: "Paulistanea Jazz Band", venue: "JazzB, Centro", cat: "musica", desc: "Big band paulistana abre o mês na casa, às 17h.", highlight: false },
+      { id: "e-requiem-ensaios", date: "06–07", title: "Ensaios abertos — Réquiem SP", venue: "Praça das Artes", cat: "teatro", desc: "Ensaios abertos e gratuitos da montagem de dança que estreia temporada oficial dia 15.", highlight: false },
+      { id: "e-moreno-domenico", date: "Qua 05", title: "Moreno Veloso e Domenico Lancellotti", venue: "Casa de Francisca, Salão", cat: "musica", desc: "Amigos de longa data reúnem parcerias de décadas de carreira num show intimista, dividindo percussão, violão e voz.", highlight: true },
+      { id: "e-claudia-castelo-branco", date: "Qua 05", title: "Claudia Castelo Branco — Solo Brasileiro", venue: "Casa de Francisca, Sala B", cat: "musica", desc: "Pianista com 20 anos de carreira estreia a 2ª Mostra de Piano & Suas Criaturas, com releituras de Sivuca e Egberto Gismonti.", highlight: false },
+      { id: "e-bluenote-cigano-pearljam", date: "Qua 05", title: "Marcelo Cigano convida Sébastien Giniaux + Pearl Jam Tribute", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "O violonista francês Sébastien Giniaux toca com Marcelo Cigano (20h); mais tarde, os Dissidents fazem tributo ao Pearl Jam (22h30).", highlight: false },
+      { id: "e-contaf", date: "05–07", title: "CONTAF — feira técnica de cerâmica", venue: "São Paulo", cat: "feira", desc: "Palestras e networking para quem cria ou comercializa cerâmica.", highlight: false },
+      { id: "e-gershwin-osesp", date: "06–08", title: "Osesp — Gershwin & Rachmaninov", venue: "Sala São Paulo", cat: "musica", desc: "Delyana Lazarova rege, com Joyce Yang ao piano. Sessão a R$ 50 na sexta 14h30.", highlight: false },
+      { id: "e-jazzb-jose-portillo", date: "Qui 06", title: "José Portillo Trio — Afro Cuba Jazz Brasil", venue: "JazzB, Centro", cat: "musica", desc: "Encontro entre o jazz afro-cubano e a música brasileira.", highlight: false },
+      { id: "e-bluenote-billyjoel-fleetwood", date: "Qui 06", title: "Tributo a Billy Joel + Fleetwood Mac", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "'We Didn't Start the Band' homenageia Billy Joel (20h); Mr. Fleet faz especial Fleetwood Mac (22h30).", highlight: false },
+      { id: "e-municipal-tandun", date: "07–08", title: "O Mundo de Tan Dun", venue: "Theatro Municipal", cat: "musica", desc: "Concerto dedicado à obra do compositor e regente chinês-americano Tan Dun, vencedor do Oscar por 'O Tigre e o Dragão'.", highlight: true },
+      { id: "e-tirambaco", date: "Sex 07", title: "Tirambaço — roda de samba", venue: "Casa de Francisca, Porão", cat: "musica", desc: "Sambas autorais e clássicos dos anos 70/80, com 6 cantores em coro. 100 entradas gratuitas na bilheteria.", highlight: false },
+      { id: "e-bia-ferreira", date: "Sex 07", title: "Bia Ferreira — Améfrica", venue: "Sesc Belenzinho", cat: "musica", desc: "Espetáculo com ritmos e referências das populações negras e latino-americanas.", highlight: false },
+      { id: "e-jazzb-hardbop", date: "Sex 07", title: "Renato Pestana Quinteto — Tributo ao Hard Bop", venue: "JazzB, Centro", cat: "musica", desc: "Repertório clássico do hard bop norte-americano.", highlight: false },
+      { id: "e-bluenote-ginger-marley", date: "Sex 07", title: "Ginger and the Peppers + Marley Night", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Show autoral às 20h; às 22h30, tributo a Bob Marley.", highlight: false },
+    ],
+  },
+  {
+    id: "w2", label: "Semana 2", range: "8 – 14 ago",
+    events: [
+      { id: "e-bluenote-so-caetano", date: "Sáb 08", title: "Só Caetano", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Paula Morelenbaum, Moreno Veloso e Jaques Morelenbaum se reúnem para revisitar o repertório de Caetano Veloso, em dois shows na mesma noite (20h e 22h30).", highlight: false },
+      { id: "e-jazzb-cinema-scores", date: "Sáb 08", title: "Cinema Music Scores", venue: "JazzB, Centro", cat: "musica", desc: "Emilio Mendonça e Vitor Alcântara tocam trilhas de cinema, às 16h.", highlight: false },
+      { id: "e-jazzb-mental-abstrato", date: "Sáb 08", title: "Mental Abstrato — 8 anos do UZOMA", venue: "JazzB, Centro", cat: "musica", desc: "Celebração dos 8 anos do coletivo UZOMA.", highlight: false },
+      { id: "e-bunkyo-feira-pop", date: "08–09", title: "Feira POP de Arte e Cultura X Bazar J-Fashion", venue: "Espaço Cultural Bunkyo", cat: "feira", desc: "Bazar de moda japonesa e feira de artistas independentes no Espaço Cultural Bunkyo, na Liberdade.", highlight: false },
+      { id: "e-bluenote-lorenza-pozza", date: "Dom 09", title: "Lorenza Pozza", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Show às 19h.", highlight: false },
+      { id: "e-jazzb-carlos-ceiro", date: "Dom 09", title: "Carlos Ceiro y Los Seis del Sur", venue: "JazzB, Centro", cat: "musica", desc: "Especial de Dia dos Pais homenageia a música cubana, às 17h.", highlight: false },
+      { id: "e-brasilidade-iyalodes", date: "10–11", title: "Brasilidade — Muito Prazer, as Iyalódes", venue: "Sesc 14 Bis", cat: "musica", desc: "Projeto de música e dança sobre a trajetória de mulheres negras na música brasileira.", highlight: false },
+      { id: "e-cf-siba", date: "Ter 11", title: "A-Lapa-Lá convida Siba", venue: "Casa de Francisca, Porão", cat: "musica", desc: "Banda de forró recebe pela primeira vez o convidado Siba, com um pedacinho da Máquina de Fazer Festa.", highlight: false },
+      { id: "e-bluenote-hermeto", date: "Ter 11", title: "Meno del Picchia — Bruxo do Coreto", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Tributo a Hermeto Pascoal.", highlight: false },
+      { id: "e-bluenote-elaine-stones", date: "Qua 12", title: "Elaine Guimarães — Nas Trilhas de Gal + RS Experience", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Elaine Guimarães percorre o repertório de Gal Costa (20h); RS Experience faz tributo aos Rolling Stones (22h30).", highlight: false },
+      { id: "e-cf-jader", date: "Qui 13", title: "Jáder — Deixa o Mundo Acabar", venue: "Casa de Francisca, Salão", cat: "musica", desc: "Cantor recifense apresenta o segundo disco, que cruza MPB com brega, forró e eletrônico. Participações de Jaloo e Johnny Hooker.", highlight: false },
+      { id: "e-jazzb-blakey", date: "Qui 13", title: "Tributo a Art Blakey & The Jazz Messengers", venue: "JazzB, Centro", cat: "musica", desc: "Jonatas Sansão Quinteto homenageia o baterista e seu histórico grupo de hard bop.", highlight: false },
+      { id: "e-bluenote-raizes-coldplay", date: "Qui 13", title: "Raízes de América + Coldplayers", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Encontro entre música e poesia latino-americanas (20h); tributo ao Coldplay (22h30).", highlight: false },
+      { id: "e-scena-italiana", date: "08–16", title: "Scena — Semana da Cena Italiana Contemporânea", venue: "Sesc Belenzinho", cat: "teatro", desc: "5ª edição reúne três espetáculos inéditos na América Latina, entre eles 'Nina', da companhia Fanny & Alexander.", highlight: false },
+      { id: "e-os-replicantes", date: "Sex 14", title: "Os Replicantes — 40 anos", venue: "Sesc Belenzinho", cat: "musica", desc: "A banda gaúcha toca o repertório do LP comemorativo de 40 anos, com clássicos como 'Surfista Calhorda' e 'Nicotina'.", highlight: false },
+      { id: "e-bluenote-mindelis-clark", date: "Sex 14", title: "Nuno Mindelis + Cristopher Clark", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Noite exclusiva de blues com Nuno Mindelis (20h); 'Divas on the Rocks', com Cristopher Clark (22h30).", highlight: false },
+    ],
+  },
+  {
+    id: "w3", label: "Semana 3", range: "15 – 21 ago",
+    events: [
+      { id: "e-jornada-bixiga", date: "Sáb 15", title: "Caminhada Bixiga Negra", venue: "Sesc Avenida Paulista", cat: "expo", desc: "Passa por marcos da presença negra no centro paulistano, dentro da Jornada do Patrimônio 2026 — inscrições já esgotadas.", highlight: false },
+      { id: "e-attooxxa", date: "Sáb 15", title: "ÀTTØØXXÁ — Tá Pra Onda", venue: "Sesc Belenzinho", cat: "musica", desc: "Após dez anos de estrada, a banda baiana estreia o show do 5º álbum, cruzando samba-reggae com afrobeats e amapiano.", highlight: false },
+      { id: "e-bluenote-bigband", date: "Sáb 15", title: "Big Band Orquestra Brasil Jazz Sinfônica + Derico 5teto", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Jazz sinfônico às 20h; Derico 5teto celebra 52 anos de música às 22h30.", highlight: false },
+      { id: "e-jazzb-krassik", date: "Sáb 15", title: "Nicolas Krassik e Pablo Moura — Duo", venue: "JazzB, Centro", cat: "musica", desc: "Encontro entre violino e viola caipira em repertório instrumental.", highlight: false },
+      { id: "e-cine-joia-spim", date: "Dom 16", title: "SPIM2026 — Bad Luv, Budang, Metade de Mim e Chococorn and the Sugarcanes", venue: "Cine Joia, Praça Carlos Gomes", cat: "musica", desc: "Line-up indie reúne quatro atrações no palco do Cine Joia, às 17h.", highlight: false },
+      { id: "e-bluenote-sabora", date: "Dom 16", title: "Banda Sabora Caribe — Tributo Tito Puente", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Show às 19h, com clássicos do mambo e da salsa.", highlight: false },
+      { id: "e-jornada-paulista", date: "Dom 16", title: "Jornada do Patrimônio — Circuito Avenida Paulista", venue: "Sesc Avenida Paulista", cat: "expo", desc: "Caminhada guiada por Alex Sartori sobre as transformações históricas da Paulista — inscrições já esgotadas.", highlight: false },
+      { id: "e-bluenote-coltrane", date: "Ter 18", title: "Musicman Jazz — Tributo Coltrane & Ellington", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Homenagem a John Coltrane e Duke Ellington.", highlight: false },
+      { id: "e-bluenote-lucio-kravitz", date: "Qua 19", title: "Rolling Stone Sessions: Lúcio Maia + Tributo Lenny Kravitz", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "O guitarrista Lúcio Maia, do Nação Zumbi, é o convidado da série (20h); Fly Away Project faz tributo a Lenny Kravitz (22h30).", highlight: false },
+      { id: "e-peca-unica", date: "19–20", title: "Peça Única — House of Hands Up", venue: "Sesc 24 de Maio", cat: "teatro", desc: "Nove performers em cena, inspirado na cultura ballroom e no vogue, pela programação do Palco Giratório.", highlight: false },
+      { id: "e-bluenote-celso-fonseca", date: "Qui 20", title: "Celso Fonseca — Tudo é Bossa + Vanda and the Youngs", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Celso Fonseca revisita a bossa nova (20h); Vanda and the Youngs tocam o AC/DC dos primeiros anos (22h30).", highlight: false },
+      { id: "e-jazzb-mica-marcondes", date: "Qui 20", title: "Mica Marcondes Quarteto", venue: "JazzB, Centro", cat: "musica", desc: "Repertório instrumental em formato quarteto.", highlight: false },
+      { id: "e-coro-osesp", date: "20–22", title: "Osesp — Coro e Coro Acadêmico", venue: "Sala São Paulo", cat: "musica", desc: "Programa coral sob regência de Jun Märkl e Thomas Blunt.", highlight: false },
+      { id: "e-claudya-60anos", date: "20–21", title: "Claudya — Deixa Eu Dizer", venue: "Casa de Francisca, Salão", cat: "musica", desc: "A cantora celebra 60 anos de carreira com banda de nove músicos, revisitando samba, bossa nova e soul em novos arranjos.", highlight: false },
+      { id: "e-bluenote-mpb4", date: "21–22", title: "MPB4 — 60 anos", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "O quarteto vocal celebra seis décadas de carreira, com dois shows por noite em ambas as datas.", highlight: false },
+    ],
+  },
+  {
+    id: "w4", label: "Semana 4", range: "22 – 31 ago",
+    events: [
+      { id: "e-cf-maysa", date: "Sáb 22", title: "Ná Ozzetti e Marcelo Ghelfi — Maysa Matarazzo 90 anos", venue: "Casa de Francisca, Salão", cat: "musica", desc: "Formato piano e voz, pela primeira vez juntos, celebra os 90 anos de Maysa com composições próprias da artista e de Tom Jobim e Dolores Duran.", highlight: false },
+      { id: "e-jazzb-manu-le-prince", date: "Sáb 22", title: "Manu Le Prince — Lançamento 'Terra Canta'", venue: "JazzB, Centro", cat: "musica", desc: "Show de lançamento do novo disco.", highlight: false },
+      { id: "e-bunkyo-percorso", date: "Dom 23", title: "Concerto Percorso Ensemble", venue: "Grande Auditório do Bunkyo", cat: "musica", desc: "Série de concertos do Bunkyo recebe o grupo dirigido pelo percussionista e regente Ricardo Bologna, ex-Osesp.", highlight: false },
+      { id: "e-bluenote-rush", date: "Dom 23", title: "Especial Rush — Ontem, Hoje e Amanhã", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Stefano Moliner apresenta tributo ao Rush, às 19h.", highlight: false },
+      { id: "e-cf-carla-casarim", date: "Ter 25", title: "Carla Casarim — Amor, Amor", venue: "Casa de Francisca, Salão", cat: "musica", desc: "Show autoral que cruza MPB e pop contemporâneo, com releituras de Caetano Veloso, Gilberto Gil e Rita Lee.", highlight: false },
+      { id: "e-bluenote-cesar-soares", date: "Ter 25", title: "Cesar Soares — Encanto", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Show autoral às 20h.", highlight: false },
+      { id: "e-bluenote-yulle-collins", date: "Qua 26", title: "Quarteto Yulle — Tributo Jobim + Phil Collins Tribute", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Tributo a Tom Jobim (20h); 'One More Night' homenageia Phil Collins (22h30).", highlight: false },
+      { id: "e-lozakovich", date: "27–29", title: "Osesp — Jun Märkl rege Lozakovich", venue: "Sala São Paulo", cat: "musica", desc: "Daniel Lozakovich, artista em residência, interpreta Sibelius. Recital de Bach em 30/08.", highlight: false },
+      { id: "e-jazzb-irmaos-brothers", date: "Qui 27", title: "Irmãos & Brothers", venue: "JazzB, Centro", cat: "musica", desc: "Show de repertório instrumental.", highlight: false },
+      { id: "e-bluenote-moa-moura", date: "Qui 27", title: "Moa + Moura + Sala de Música — 9 anos", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Moacyr Luz e Gabriel Moura dividem o palco (20h); a série Sala de Música completa 9 anos (22h30).", highlight: false },
+      { id: "e-jazzb-vera-ari", date: "28–29", title: "Vera Figueiredo Trio + Ari Borger Trio", venue: "JazzB, Centro", cat: "musica", desc: "Dois trios de jazz instrumental fecham o mês na casa, em noites consecutivas.", highlight: false },
+      { id: "e-bluenote-quimbara", date: "Sex 28", title: "Quimbará toca Buena Vista Social Club + Bad Bunny", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Dois sets na mesma noite: clássicos cubanos às 20h e um tributo latino-pop a Bad Bunny às 22h30.", highlight: false },
+      { id: "e-souto-mc", date: "24 e 31", title: "Souto MC — Flow Marginal", venue: "Sesc 14 Bis", cat: "musica", desc: "Show gratuito das 18h às 19h.", highlight: false },
+      { id: "e-bunka-matsuri", date: "29–30", title: "Bunka Matsuri — 20ª edição", venue: "Bunkyo — Liberdade", cat: "feira", desc: "Festa da cultura japonesa de rua celebra 20 anos: gastronomia, Miss Nikkey, concurso de cosplay e a Arena Geek.", highlight: true },
+      { id: "e-hamilton-holanda", date: "29–30", title: "Hamilton de Holanda Trio", venue: "Sesc Belenzinho", cat: "musica", desc: "Primeira apresentação em SP do repertório do novo álbum, previsto para o segundo semestre.", highlight: true },
+      { id: "e-bluenote-jamiroquai", date: "Sáb 29", title: "Beatles em Jazz + Jamiroquai Experience", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Mark Lambert toca os Beatles em versão jazz (20h); Jamiroquai Experience celebra os 30 anos de 'Travelling Without Moving' (22h30).", highlight: false },
+      { id: "e-bluenote-phill-veras", date: "Dom 30", title: "Phill Veras — Turnê 'Particular'", venue: "Blue Note, Av. Paulista", cat: "musica", desc: "Show às 19h.", highlight: false },
+    ],
+  },
+];
+
+const ALL_EVENTS = WEEKS.flatMap((w) => w.events);
+
+// ---------------------------------------------------------------------------
+// EM CARTAZ — exposições, peças e agendas contínuas que passam de uma semana.
+// Não entram em WEEKS pra não duplicar; aparecem só na aba "Em Cartaz".
+// Estrutura igual à de EVENT, mas com "period" no lugar de "date" (texto livre).
+// ---------------------------------------------------------------------------
+const ONGOING = [
+  { id: "e-masp-latino", period: "Em cartaz o mês todo", title: "Histórias Latino-Americanas", venue: "MASP", cat: "expo", desc: "Programação anual dedicada à latinidade: Santiago Yahuarcani, Damián Ortega, La Chola Poblete e Carolina Caycedo dividem o museu.", highlight: true },
+  { id: "e-pinacoteca-tres", period: "Em cartaz o mês todo", title: "Pinacoteca em três edifícios", venue: "Pina Luz · Pina Estação · Pina Contemporânea", cat: "expo", desc: "'Uma Obra: Pintura sem fim' (Pina Luz), Beatriz Milhazes: gravuras (Pina Estação) e 'Macunaíma é Duwid' (Pina Estação) dividem um único ingresso entre os três prédios.", highlight: true },
+  { id: "e-requiem-sp", period: "Temporada: 15 a 22/08", title: "Réquiem SP", venue: "Theatro Municipal", cat: "teatro", desc: "Dança contemporânea sobre Ligeti e Venetian Snares, com 17 bailarinos em cena.", highlight: true },
+  { id: "e-atoto-oficina", period: "5, 12, 19 e 26/08, sempre às 20h30", title: "Atotô — Silêncio, o Rei Está na Terra", venue: "Teatro Oficina, Bixiga", cat: "teatro", desc: "Remontagem da Cia Odara homenageia Obaluaê com elenco de cerca de 40 artistas, no mês em que o teatro completa 63 anos.", highlight: true },
+  { id: "e-ia-infraestrutura", period: "A partir de 06/08", title: "Exposição internacional — infraestrutura da IA", venue: "Sesc 24 de Maio", cat: "expo", desc: "Mostra inédita no Brasil revela a infraestrutura física e os impactos invisíveis da inteligência artificial no mundo.", highlight: false },
+  { id: "e-riscadura-fogo", period: "Até 02/08", title: "Riscadura de Fogo — Jorge dos Anjos", venue: "Sesc Pompeia", cat: "expo", desc: "Últimos dias desta exposição de escultura em ferro do artista mineiro, na área de convivência.", highlight: false },
+  { id: "e-ccbb-fecha", period: "Até 03/08", title: "Atlântico Sertão / Pele Azul", venue: "CCBB São Paulo", cat: "expo", desc: "Últimos dias destas duas exposições — confirmado no site oficial, ambas encerram no mesmo dia.", highlight: false },
+  { id: "e-cantrizes", period: "14–17/08", title: "Cantrizes — atrizes que cantam", venue: "Sesc Pompeia", cat: "teatro", desc: "Alessandra Maestrini, Letícia Soares, Virginia Rosa e Letícia Sabatella em shows autorais que unem atuação e música.", highlight: false },
+  { id: "e-ccsp-semana", period: "Programação renovada semanalmente", title: "Agenda gratuita do CCSP", venue: "CCSP, Vergueiro", cat: "teatro", desc: "'Pèrègun – A Nativa' (dança indígena, 1–3/08) e 'Contos Originários: Lili Canta Histórias' (23–24/08) são dois destaques de uma grade semanal renovada, toda gratuita.", highlight: false },
+  { id: "e-japanhouse-continua", period: "Em cartaz o mês todo", title: "Shiro: uma escala de nuances + KIGUMI", venue: "Japan House SP", cat: "expo", desc: "'Shiro' explora a cor branca na estética japonesa; 'KIGUMI' revela técnicas de junta de madeira sem pregos. Agenda de agosto tem palestra sobre papel artesanal (11/08) e clube de leitura (27/08).", highlight: false },
+];
+
+const ALL_LIST_EVENTS = [...ALL_EVENTS, ...ONGOING];
+
+// ---------------------------------------------------------------------------
+
+function Tag({ cat }) {
+  const s = CATEGORY_STYLES[cat];
+  return (
+    <span style={{
+      display: "inline-block", fontFamily: "var(--font-heading)", fontWeight: 700,
+      fontSize: "10.5px", letterSpacing: "0.06em", textTransform: "uppercase",
+      padding: "3px 8px", background: s.bg, color: s.fg,
+    }}>
+      {s.label}
+    </span>
+  );
+}
+
+function HeartButton({ isFav, onToggleFav }) {
+  return (
+    <button
+      onClick={onToggleFav}
+      aria-label={isFav ? "Remover dos favoritos" : "Salvar nos favoritos"}
+      style={{
+        border: "none", background: "none", cursor: "pointer", padding: 4,
+        flexShrink: 0, fontSize: 18, color: isFav ? "var(--color-accent)" : "var(--color-neutral-400)",
+      }}
+    >
+      ♥
+    </button>
+  );
+}
+
+function Card({ ev, dateOrPeriod, isPeriod, isFav, onToggleFav }) {
+  return (
+    <div style={{
+      borderBottom: "2px solid var(--color-divider)", padding: "20px 0",
+      display: "flex", gap: 12,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          <Tag cat={ev.cat} />
+          {!isPeriod && (
+            <span style={{ fontSize: 11, letterSpacing: "0.05em", color: "var(--color-neutral-700)", textTransform: "uppercase" }}>
+              {dateOrPeriod}
+            </span>
+          )}
+        </div>
+        <h3 style={{ margin: "0 0 6px", fontFamily: "var(--font-heading)", fontWeight: 800, textTransform: "uppercase", fontSize: 19, lineHeight: 1.15 }}>
+          {ev.title}
+        </h3>
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", textTransform: "uppercase", color: "var(--color-neutral-800)", marginBottom: isPeriod ? 4 : 8 }}>
+          {ev.venue}
+        </div>
+        {isPeriod && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--color-accent-700)", marginBottom: 8, textTransform: "uppercase" }}>
+            {dateOrPeriod}
+          </div>
+        )}
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "var(--color-neutral-900)" }}>{ev.desc}</p>
+      </div>
+      <HeartButton isFav={isFav} onToggleFav={onToggleFav} />
+    </div>
+  );
+}
+
+function App() {
+  const [weekIdx, setWeekIdx] = useState(0);
+  const [view, setView] = useState("semana");
+  const [favorites, setFavorites] = useState(new Set());
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("agenda-cultural:favoritos");
+      if (raw) setFavorites(new Set(JSON.parse(raw)));
+    } catch (e) {
+      // sem favoritos salvos ainda
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  const toggleFav = (id) => {
+    const next = new Set(favorites);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setFavorites(next);
+    try {
+      localStorage.setItem("agenda-cultural:favoritos", JSON.stringify([...next]));
+    } catch (e) {
+      console.error("Não foi possível salvar o favorito agora.", e);
+    }
+  };
+
+  const highlights = useMemo(() => ALL_LIST_EVENTS.filter((e) => e.highlight), []);
+  const favEvents = useMemo(() => ALL_LIST_EVENTS.filter((e) => favorites.has(e.id)), [favorites]);
+  const currentWeek = WEEKS[weekIdx];
+
+  const tabs = [
+    { key: "semana", label: "Semanas" },
+    { key: "cartaz", label: "Em Cartaz" },
+    { key: "destaques", label: "Destaques" },
+    { key: "favoritos", label: "Favoritos" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", fontFamily: "var(--font-body)", background: "var(--color-bg)", color: "var(--color-text)" }}>
+      {/* HEADER */}
+      <div style={{ background: "var(--color-neutral-900)", padding: "32px 20px 16px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, borderBottom: "2px solid var(--color-bg)", paddingBottom: 12 }}>
+            <h1 style={{ fontSize: "clamp(30px, 5vw, 52px)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.01em", color: "var(--color-bg)" }}>
+              Agenda Cultural
+            </h1>
+            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, color: "var(--color-accent-400)", fontSize: 13, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+              Centro de São Paulo
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingTop: 12 }}>
+            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-200)", fontSize: 14 }}>
+              {MONTH_LABEL} de {YEAR_LABEL}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Atualizado em {LAST_UPDATED}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* TABS */}
+      <div style={{ borderBottom: "2px solid var(--color-divider)", position: "sticky", top: 0, zIndex: 10, background: "var(--color-bg)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", overflowX: "auto" }}>
+          {tabs.map((t) => (
+            <button key={t.key} onClick={() => setView(t.key)} style={{
+              flex: "1", minWidth: 110, padding: "14px 10px", fontFamily: "var(--font-heading)",
+              fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em",
+              border: "none", background: "none", cursor: "pointer",
+              borderBottom: `2px solid ${view === t.key ? "var(--color-accent)" : "transparent"}`,
+              color: view === t.key ? "var(--color-text)" : "var(--color-neutral-700)",
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 64px" }}>
+        {view === "semana" && (
+          <React.Fragment>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 0 16px" }}>
+              <button onClick={() => setWeekIdx((i) => Math.max(0, i - 1))} disabled={weekIdx === 0}
+                style={{ border: "2px solid var(--color-divider)", background: "none", width: 36, height: 36, fontSize: 16, cursor: "pointer", color: "var(--color-text)", opacity: weekIdx === 0 ? 0.3 : 1 }}>
+                ←
+              </button>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: "var(--font-heading)", fontWeight: 800, textTransform: "uppercase", fontSize: 22 }}>{currentWeek.label}</div>
+                <div style={{ fontSize: 12, color: "var(--color-neutral-700)" }}>{currentWeek.range}</div>
+              </div>
+              <button onClick={() => setWeekIdx((i) => Math.min(WEEKS.length - 1, i + 1))} disabled={weekIdx === WEEKS.length - 1}
+                style={{ border: "2px solid var(--color-divider)", background: "none", width: 36, height: 36, fontSize: 16, cursor: "pointer", color: "var(--color-text)", opacity: weekIdx === WEEKS.length - 1 ? 0.3 : 1 }}>
+                →
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+              {currentWeek.events.map((ev) => (
+                <Card key={ev.id} ev={ev} dateOrPeriod={ev.date} isPeriod={false} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
+              ))}
+            </div>
+            {weekIdx === WEEKS.length - 1 && (
+              <div style={{ marginTop: 28, border: "2px solid var(--color-divider)", padding: 20 }}>
+                <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--color-neutral-700)", marginBottom: 12 }}>
+                  Fique de olho — sem agenda confirmada
+                </div>
+                {WATCHLIST.map((w) => (
+                  <div key={w.name} style={{ fontSize: 13, marginBottom: 8, lineHeight: 1.5 }}>
+                    <span style={{ fontWeight: 700 }}>{w.name}: </span>
+                    <span style={{ color: "var(--color-neutral-700)" }}>{w.note}</span>
+                    {w.url && (
+                      <React.Fragment>
+                        {" "}
+                        <a href={w.url} target="_blank" rel="noopener noreferrer">Ver site ↗</a>
+                      </React.Fragment>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </React.Fragment>
+        )}
+
+        {view === "cartaz" && (
+          <div>
+            <p style={{ fontSize: 12, color: "var(--color-neutral-700)", padding: "20px 0 4px" }}>
+              Exposições, peças e agendas contínuas que seguem por mais de uma semana.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+              {ONGOING.map((ev) => (
+                <Card key={ev.id} ev={ev} dateOrPeriod={ev.period} isPeriod={true} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === "destaques" && (
+          <div>
+            <p style={{ fontSize: 12, color: "var(--color-neutral-700)", padding: "20px 0 4px" }}>
+              O que não perder este mês, em qualquer semana.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+              {highlights.map((ev) => (
+                <Card key={ev.id} ev={ev} dateOrPeriod={ev.date || ev.period} isPeriod={!ev.date} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === "favoritos" && (
+          <div>
+            {!loaded ? (
+              <p style={{ fontSize: 13, color: "var(--color-neutral-400)", padding: "48px 0", textAlign: "center" }}>Carregando...</p>
+            ) : favEvents.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "64px 20px" }}>
+                <div style={{ fontSize: 32, color: "var(--color-neutral-400)", marginBottom: 8 }}>♡</div>
+                <p style={{ fontSize: 13, color: "var(--color-neutral-700)" }}>Toque no coração de um evento para salvá-lo aqui.</p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px", paddingTop: 20 }}>
+                {favEvents.map((ev) => (
+                  <Card key={ev.id} ev={ev} dateOrPeriod={ev.date || ev.period} isPeriod={!ev.date} isFav={true} onToggleFav={() => toggleFav(ev.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
