@@ -1,1 +1,8 @@
+# Site settings
+title: Agenda Cultural SP
+email: gabrieldduarte123@gmail.com
+description: 
 
+# URL settings
+url: "https://agendacultural.github.io"
+baseurl: ""
