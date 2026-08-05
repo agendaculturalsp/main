@@ -67,10 +67,7 @@ sem programação confirmada:
 
 ## Como publicar
 
-- **Netlify Drop**: arraste o `agenda-cultural-sp.html` para
-  [app.netlify.com/drop](https://app.netlify.com/drop). Pronto, tem link
-  público.
-- **GitHub Pages / Replit**: também funciona, já que é um arquivo estático
+- **GitHub Pages** já que é um arquivo estático
   único — sem build, sem dependências além dos CDNs carregados no `<head>`.
 
 ## Identidade visual (fixa)
