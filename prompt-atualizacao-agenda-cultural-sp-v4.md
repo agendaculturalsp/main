@@ -99,9 +99,10 @@ Instituto Tomie Ohtake, Museu da Língua Portuguesa, Farol Santander, Auditório
    mencionar o dia da semana (ex: "dia 23, sexta-feira"), cruzar com o calendário real do
    mês/ano em questão antes de usar a data — é o jeito mais confiável de pegar conteúdo
    reindexado de anos anteriores que passaria despercebido só pelo texto.
-4. **Se a agenda do mês não estiver publicada, não inventar**: registrar na
-   watchlist (ver seção 6). Esta regra tem prioridade sobre qualquer meta de
-   cobertura da seção 9.
+4. **Se a agenda do mês não estiver publicada, não inventar**: simplesmente
+   não incluir esse local nesta rodada, relatando o que foi verificado no
+   relatório final (seção 8). Esta regra tem prioridade sobre qualquer meta
+   de cobertura daquela seção.
 5. **Casas com agenda contínua (JazzB, Blue Note, Cine Joia, entre outros) devem ter
    TODOS os eventos do mês registrados individualmente — sem resumir, sem escolher só
    "os mais notáveis" para caber no app.** Se o site oficial lista 25 shows no mês, o
@@ -120,7 +121,8 @@ Instituto Tomie Ohtake, Museu da Língua Portuguesa, Farol Santander, Auditório
 { id: "e-slug-unico", date: "DD" ou "DD–DD", title: "Nome do evento",
   venue: "Nome do local", cat: "musica|teatro|expo|cinema|feira",
   desc: "1-2 frases com o dado mais interessante (artista convidado,
-  preço especial, motivo de ser destaque)", highlight: true|false }
+  preço especial, motivo de ser destaque)", highlight: true|false,
+  url: "link direto para a página do evento, se existir" }
 ```
 
 Regras:
@@ -130,6 +132,26 @@ Regras:
 - Categoria (`cat`) é sempre uma das cinco suportadas — um mesmo local pode
   ter eventos de categorias diferentes no mesmo mês (ex: CCBB com exposição
   E teatro), isso não é erro, é normal.
+
+### 5.1 Campo `url` (link do evento no app)
+
+O app usa `url` para dois recursos: o link "Ver página do evento" no card e o
+texto compartilhado no botão do WhatsApp.
+
+- Sempre que a busca (seção 4) encontrar uma página específica do evento
+  (não só da agenda geral do local), registrar o link ali — página do
+  ingresso (Sympla, Eventim, Bilheteria Digital etc.), página oficial do
+  evento, ou o post que confirmou a informação.
+- Se só existir a agenda geral do local (sem página própria do evento),
+  **não inventar uma URL nem usar a home do site**: omitir o campo `url`
+  inteiramente (não usar `url: ""` nem um link genérico) — o app já trata a
+  ausência do campo e simplesmente não mostra o link. Preencher com a home
+  do site "só para ter alguma coisa" é pior que omitir, porque implica um
+  link específico que não existe.
+- Nunca reaproveitar a URL de um evento anterior para um evento novo com
+  nome parecido (ex: mesma casa, artista diferente) — cada `url` precisa ter
+  sido de fato encontrada para aquele evento específico nesta rodada.
+- Isso vale tanto para `WEEKS` quanto para `ONGOING`.
 
 ### 5.1 Atração principal no início do `desc`
 Nas primeiras palavras do `desc`, priorizar o nome do artista/obra/diretor
@@ -145,34 +167,7 @@ vale mesmo quando a pesquisa da seção 4.5 traz dezenas de eventos de agenda
 contínua: a maioria entra com `highlight: false` — a cota de 6-8 é sobre
 relevância, não sobre volume de eventos coletados.
 
-## 6. Seção "Fique de olho" (WATCHLIST)
-
-Formato do item — curto, sem parágrafo explicativo:
-
-```js
-{ name: "Nome do local ou item", note: "Frase de até ~6 palavras dizendo por
-que não entrou (agenda não publicada / bloqueado / dados não batem)", url: "link
-direto para a página onde o leitor pode checar por conta própria" }
-```
-
-Se não houver uma página única para linkar (ex: um grupo de feiras sem site
-comum), deixar `url: ""` — o app já trata isso e não renderiza o link vazio.
-
-Regras:
-- Só entram locais **confirmadamente** sem programação publicada até a data da
-  busca, ou com dado que não pôde ser validado (ex: datas que não batem com o
-  calendário do ano). Nunca usar a watchlist para disfarçar uma busca que
-  simplesmente não foi feita — isso é erro metodológico, não achado.
-- **Cada atualização deve re-verificar os itens que já estavam na watchlist da
-  vez anterior — não apenas copiá-los.** Um local pode ter publicado a agenda
-  desde a última rodada. Se a nota antiga for reaproveitada sem nova checagem,
-  isso precisa ficar explícito no relatório da seção 9 (não pode ler como se
-  fosse verificação fresca).
-- Nota factual e específica, não genérica: "site não teve a data checada" é
-  errado; "agenda de agosto não publicada" ou "bloqueado por proteção anti-bot"
-  está correto.
-
-## 7. Identidade do app (fixo)
+## 6. Identidade do app (fixo)
 
 - Nome do app: **Agenda Cultural SP**. Título visível no header: **Agenda
   Cultural — Centro de São Paulo** (não alterar a menos que pedido).
@@ -186,28 +181,30 @@ Regras:
   destaque, fundo geral `#f3f2f2`. Grade de cards em `repeat(auto-fit,
   minmax(380px, 1fr))` — uma coluna em telas estreitas, duas ou mais em telas
   largas. Esse layout é fixo — não recriar do zero a cada atualização, só
-  substituir os dados (`WEEKS`, `ONGOING`, `WATCHLIST`, `MONTH_LABEL`,
-  `YEAR_LABEL`, `LAST_UPDATED`).
+  substituir os dados (`WEEKS`, `ONGOING`, `MONTH_LABEL`, `YEAR_LABEL`,
+  `LAST_UPDATED`).
 
-## 8. Priorização temporal
+## 7. Priorização temporal
 
 - Eventos na última semana de temporada (encerram em ≤7 dias) ganham nota
   "Últimos dias!" no início do `desc`.
 - Eventos com datas múltiplas (ex: 06–08): mencionar no `desc` se algum dia
   específico tem preço especial ou atração extra, só quando for verdade.
 
-## 9. Relatório de atualização (obrigatório ao final)
+## 8. Relatório de atualização (obrigatório ao final)
 
 Ao fim de cada atualização, reportar ao usuário:
 
 **✅ Locais confirmados** — quantos eventos por local.
 **⚠️ Locais sem programação encontrada** — com nota factual do que foi
 verificado (não "não encontrei nada", e sim "verifiquei X e a fonte diz Y").
-Indicar explicitamente quais itens da watchlist foram re-checados nesta
-rodada e quais foram apenas mantidos de uma rodada anterior sem nova checagem.
+Indicar quais desses locais já haviam ficado sem programação na rodada
+anterior e foram re-checados nesta vez (não apenas repetidos sem nova busca)
+— um local pode ter publicado a agenda desde então.
 **🔍 Novos locais pesquisados nesta rodada** (se houver).
 **📊 Estatísticas gerais** — total de eventos, destaques, fontes principais
-consultadas.
+consultadas, quantos eventos ganharam `url` própria (ver seção 5.1) vs.
+quantos ficaram sem por falta de página específica.
 **⚠️ Observações de acuracidade** — dado incerto, inferência feita, fonte
 oficial fora do ar/substituída por alternativa.
 

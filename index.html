@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agenda Cultural — Centro de São Paulo</title>
+<script>
+  // Aplica o tema salvo (ou o do sistema) antes do primeiro paint, evitando flash.
+  (function () {
+    try {
+      var stored = localStorage.getItem("agenda-cultural:tema");
+      var theme = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {}
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -12,21 +22,51 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
   :root {
+    /* Paleta adaptável — muda com o tema (claro por padrão) */
     --color-bg: #f3f2f2;
     --color-surface: #eae9e9;
     --color-text: #201e1d;
-    --color-accent: #ec3013;
     --color-divider: rgba(32, 30, 29, 0.4);
     --color-neutral-200: #eae7e7;
     --color-neutral-400: #bab6b6;
     --color-neutral-700: #605d5d;
     --color-neutral-800: #444141;
     --color-neutral-900: #201e1d;
-    --color-accent-100: #fff2ef;
-    --color-accent-400: #ff9783;
     --color-accent-700: #ae1800;
+
+    /* Cor de destaque — fixa nos dois temas */
+    --color-accent: #ec3013;
+
+    /* Identidade do header — sempre grafite/claro, não muda com o tema (ver seção 7 do prompt-mestre) */
+    --color-header-bg: #201e1d;
+    --color-header-text: #f3f2f2;
+    --color-header-divider: #f3f2f2;
+    --color-header-subtle: #eae7e7;
+    --color-header-muted: #bab6b6;
+    --color-header-accent: #ff9783;
+
+    /* Cores das etiquetas de categoria — fixas nos dois temas (reconhecimento visual constante) */
+    --tag-neutral-bg: #eae7e7;
+    --tag-neutral-fg: #444141;
+    --tag-dark-bg: #444141;
+    --tag-dark-fg: #f3f2f2;
+    --tag-accent-bg: #fff2ef;
+    --tag-accent-fg: #ae1800;
+
     --font-heading: 'Archivo', system-ui, sans-serif;
     --font-body: 'Archivo', system-ui, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --color-bg: #171514;
+    --color-surface: #221f1e;
+    --color-text: #f3f2f2;
+    --color-divider: rgba(243, 242, 242, 0.18);
+    --color-neutral-200: #2c2927;
+    --color-neutral-400: #7a7674;
+    --color-neutral-700: #b8b4b3;
+    --color-neutral-800: #e6e3e2;
+    --color-neutral-900: #f3f2f2;
+    --color-accent-700: #ff8266;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
@@ -48,23 +88,12 @@ const MONTH_LABEL = "Agosto";
 const YEAR_LABEL = "2026";
 const LAST_UPDATED = "05/08/2026";
 
-const WATCHLIST = [
-  { name: "Vila Itororó", note: "Agosto ainda não publicado.", url: "https://vilaitororo.prefeitura.sp.gov.br/programacao/" },
-  { name: "Galeria Metrópole", note: "Sem agenda pública fora do Instagram.", url: "https://www.instagram.com/galeriametropole.sp/" },
-  { name: "Sesc 14 Bis — Amanda Maria, Luccas Carlos, Mariana Aydar, Antonio Pinto", note: "Datas encontradas não batem com o calendário de 2026.", url: "https://www.sescsp.org.br/unidades/14bis/" },
-  { name: "Cine Joia — line-up completo", note: "Bloqueado por proteção anti-bot no site oficial.", url: "https://www.cinejoia.com.br/agenda/" },
-  { name: "Cinemateca Brasileira", note: "Não pesquisada nesta rodada.", url: "https://cinemateca.org.br/programacao/" },
-  { name: "Mundo Pensante", note: "Não pesquisado nesta rodada.", url: "https://www.mundopensante.com.br/" },
-  { name: "Feiras — Jabuticaba, Gengibrão, Barbotina, feiras do livro/zines", note: "Datas de agosto não confirmadas.", url: "" },
-  { name: "Tomie Ohtake, Museu da Língua Portuguesa, Farol Santander, Auditório do Ibirapuera, Museu Afro Brasil, Ouro Velho/Ugra", note: "Não pesquisados nesta rodada.", url: "" },
-];
-
 const CATEGORY_STYLES = {
-  musica: { label: "Música", bg: "var(--color-neutral-200)", fg: "var(--color-neutral-800)" },
-  teatro: { label: "Teatro/Dança", bg: "var(--color-neutral-800)", fg: "var(--color-bg)" },
-  expo: { label: "Exposição", bg: "var(--color-accent-100)", fg: "var(--color-accent-700)" },
-  cinema: { label: "Cinema", bg: "var(--color-neutral-200)", fg: "var(--color-neutral-800)" },
-  feira: { label: "Feira/Festival", bg: "var(--color-neutral-800)", fg: "var(--color-bg)" },
+  musica: { label: "Música", bg: "var(--tag-neutral-bg)", fg: "var(--tag-neutral-fg)" },
+  teatro: { label: "Teatro/Dança", bg: "var(--tag-dark-bg)", fg: "var(--tag-dark-fg)" },
+  expo: { label: "Exposição", bg: "var(--tag-accent-bg)", fg: "var(--tag-accent-fg)" },
+  cinema: { label: "Cinema", bg: "var(--tag-neutral-bg)", fg: "var(--tag-neutral-fg)" },
+  feira: { label: "Feira/Festival", bg: "var(--tag-dark-bg)", fg: "var(--tag-dark-fg)" },
 };
 
 const WEEKS = [
@@ -178,6 +207,238 @@ const ONGOING = [
 const ALL_LIST_EVENTS = [...ALL_EVENTS, ...ONGOING];
 
 // ---------------------------------------------------------------------------
+// UTILITÁRIOS DE DATA — usados pelo indicador "Hoje" e pelo botão "Adicionar
+// ao calendário". Interpretam os campos de texto livre `date` (WEEKS) e
+// `period` (ONGOING) com base em MONTH_LABEL/YEAR_LABEL. Quando o texto não
+// pode ser interpretado com segurança, retornam null — a UI então esconde o
+// recurso em vez de arriscar uma data errada.
+// ---------------------------------------------------------------------------
+const MONTH_NAMES_PT = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+function getMonthYearNums() {
+  const idx = MONTH_NAMES_PT.indexOf(MONTH_LABEL.trim().toLowerCase());
+  const year = Number(YEAR_LABEL);
+  if (idx === -1 || !year) return { month: null, year: null };
+  return { month: idx + 1, year };
+}
+
+// Interpreta o campo `date` de eventos da agenda semanal (ex: "Sáb 01",
+// "06–07", "24 e 31").
+function parseWeekDateField(dateStr) {
+  if (!dateStr) return null;
+  const clean = dateStr.trim();
+  const rangeMatch = clean.match(/(\d{1,2})\s*[–-]\s*(\d{1,2})/);
+  if (rangeMatch) {
+    return { type: "range", start: parseInt(rangeMatch[1], 10), end: parseInt(rangeMatch[2], 10) };
+  }
+  const parts = clean
+    .split(/\s+e\s+|,\s*/i)
+    .map((p) => p.match(/\d{1,2}/))
+    .filter(Boolean)
+    .map((m) => parseInt(m[0], 10));
+  if (parts.length > 1) return { type: "multi", days: parts };
+  if (parts.length === 1) return { type: "single", day: parts[0] };
+  return null;
+}
+
+// Interpreta o campo `period` dos itens "Em Cartaz" (texto livre — cobre os
+// padrões mais comuns; formatos inesperados retornam null de propósito).
+function parsePeriodField(periodStr, month, year) {
+  if (!periodStr) return null;
+  const s = periodStr.trim();
+
+  if (/mês todo/i.test(s)) {
+    return { type: "range", start: new Date(year, month - 1, 1), end: new Date(year, month, 1) };
+  }
+
+  let m = s.match(/(\d{1,2})\s*(?:a|–|-)\s*(\d{1,2})\/(\d{1,2})/i);
+  if (m) {
+    const d1 = parseInt(m[1], 10), d2 = parseInt(m[2], 10), mm = parseInt(m[3], 10);
+    return { type: "range", start: new Date(year, mm - 1, d1), end: new Date(year, mm - 1, d2 + 1) };
+  }
+
+  m = s.match(/a partir de\s*(\d{1,2})\/(\d{1,2})/i);
+  if (m) {
+    const d = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+    return { type: "range", start: new Date(year, mm - 1, d), end: new Date(year, mm - 1, d + 1) };
+  }
+
+  m = s.match(/até\s*(\d{1,2})\/(\d{1,2})/i);
+  if (m) {
+    const d = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+    return { type: "range", start: new Date(year, mm - 1, d), end: new Date(year, mm - 1, d + 1) };
+  }
+
+  const beforeSempre = s.split(/sempre/i)[0];
+  const monthMatch = beforeSempre.match(/\/(\d{1,2})\b/);
+  if (monthMatch) {
+    const mm = parseInt(monthMatch[1], 10);
+    const dayListStr = beforeSempre.replace(/\/\d{1,2}/, "");
+    const days = dayListStr
+      .split(/,\s*|\s+e\s+/i)
+      .map((p) => p.match(/\d{1,2}/))
+      .filter(Boolean)
+      .map((mt) => parseInt(mt[0], 10));
+    if (days.length > 1) return { type: "multi", days: days.map((d) => ({ day: d, month: mm })) };
+    if (days.length === 1) {
+      return { type: "range", start: new Date(year, mm - 1, days[0]), end: new Date(year, mm - 1, days[0] + 1) };
+    }
+  }
+
+  return null;
+}
+
+// Retorna uma lista de intervalos {start, end} (end exclusivo, para ICS) ou
+// null se o texto da data não puder ser interpretado com segurança.
+function getEventDateRanges(ev, isPeriod) {
+  const { month, year } = getMonthYearNums();
+  if (!month || !year) return null;
+
+  if (isPeriod) {
+    const parsed = parsePeriodField(ev.period, month, year);
+    if (!parsed) return null;
+    if (parsed.type === "range") return [{ start: parsed.start, end: parsed.end }];
+    if (parsed.type === "multi") {
+      return parsed.days.map((d) => ({
+        start: new Date(year, d.month - 1, d.day),
+        end: new Date(year, d.month - 1, d.day + 1),
+      }));
+    }
+    return null;
+  }
+
+  const parsed = parseWeekDateField(ev.date);
+  if (!parsed) return null;
+  if (parsed.type === "range") {
+    return [{ start: new Date(year, month - 1, parsed.start), end: new Date(year, month - 1, parsed.end + 1) }];
+  }
+  if (parsed.type === "single") {
+    return [{ start: new Date(year, month - 1, parsed.day), end: new Date(year, month - 1, parsed.day + 1) }];
+  }
+  if (parsed.type === "multi") {
+    return parsed.days.map((d) => ({
+      start: new Date(year, month - 1, d),
+      end: new Date(year, month - 1, d + 1),
+    }));
+  }
+  return null;
+}
+
+function isEventToday(ev, isPeriod) {
+  if (isPeriod || !ev.date) return false;
+  const { month, year } = getMonthYearNums();
+  if (!month || !year) return false;
+  const today = new Date();
+  if (today.getFullYear() !== year || today.getMonth() + 1 !== month) return false;
+  const parsed = parseWeekDateField(ev.date);
+  if (!parsed) return false;
+  const day = today.getDate();
+  if (parsed.type === "single") return parsed.day === day;
+  if (parsed.type === "range") return day >= parsed.start && day <= parsed.end;
+  if (parsed.type === "multi") return parsed.days.includes(day);
+  return false;
+}
+
+// Um evento é considerado "encerrado" quando a última data de sua ocorrência
+// já passou. Só entra em vigor quando MONTH_LABEL/YEAR_LABEL é de fato o mês
+// corrente — assim, ao navegar numa agenda de mês passado ou futuro, nada é
+// escondido (a regra só faz sentido dentro do mês que está "ao vivo").
+// Datas que não puderam ser interpretadas nunca são tratadas como encerradas
+// (falha para o lado de manter visível).
+function hasEventEnded(ev, isPeriod) {
+  const { month, year } = getMonthYearNums();
+  if (!month || !year) return false;
+  const today = new Date();
+  if (today.getFullYear() !== year || today.getMonth() + 1 !== month) return false;
+  const ranges = getEventDateRanges(ev, isPeriod);
+  if (!ranges || ranges.length === 0) return false;
+  const maxEnd = ranges.reduce((max, r) => (r.end > max ? r.end : max), ranges[0].end);
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return todayStart >= maxEnd;
+}
+
+// Usado nas listas mistas (Em Cartaz, Destaques) onde cada item pode ter
+// `date` (evento semanal) ou `period` (item contínuo).
+function hasEventEndedGeneric(ev) {
+  return hasEventEnded(ev, !ev.date);
+}
+
+// Uma semana é considerada encerrada quando todos os seus eventos já
+// passaram (com a mesma ressalva: só se aplica dentro do mês corrente).
+function hasWeekEnded(week) {
+  return week.events.length > 0 && week.events.every((ev) => hasEventEnded(ev, false));
+}
+
+// Índice da semana que contém a data de hoje, dentro de uma lista de semanas
+// já filtrada. Fora do mês corrente (ou se nada bater), cai na primeira.
+function getCurrentWeekIndex(weeks) {
+  const idx = weeks.findIndex((w) => w.events.some((ev) => isEventToday(ev, false)));
+  return idx >= 0 ? idx : 0;
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function fmtICSDate(d) { return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`; }
+function icsEscape(str) {
+  return String(str).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+function buildICS(ev, ranges) {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Agenda Cultural SP//PT-BR", "CALSCALE:GREGORIAN"];
+  ranges.forEach((r, i) => {
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${ev.id}-${i}@agendaculturalsp`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${fmtICSDate(r.start)}`,
+      `DTEND;VALUE=DATE:${fmtICSDate(r.end)}`,
+      `SUMMARY:${icsEscape(ev.title)}`,
+      `LOCATION:${icsEscape(ev.venue)}`,
+      `DESCRIPTION:${icsEscape(ev.desc + (ev.url ? "\n" + ev.url : ""))}`,
+      "END:VEVENT"
+    );
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function downloadICS(filename, content) {
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Datas curtas do formato semanal ("08–09", "Sáb 01") ganham o mês junto
+// (ex: "08–09/08") pra fazer sentido fora do contexto do app. Textos de
+// período já completos (com "/" ou sem nenhum dígito) ficam como estão.
+function formatShareDate(dateOrPeriod) {
+  if (!dateOrPeriod) return "";
+  const { month } = getMonthYearNums();
+  if (month && !dateOrPeriod.includes("/") && /\d/.test(dateOrPeriod)) {
+    return `${dateOrPeriod}/${pad2(month)}`;
+  }
+  return dateOrPeriod;
+}
+
+function buildWhatsAppShareUrl(ev, dateOrPeriod) {
+  const dateText = formatShareDate(dateOrPeriod);
+  let text = `Olha o que encontrei na Agenda Cultural SP: ${ev.title}, em ${ev.venue}`;
+  if (dateText) text += `, ${dateText}`;
+  text += ", vamos?";
+  if (ev.url) text += `\n${ev.url}`;
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+// ---------------------------------------------------------------------------
 
 function Tag({ cat }) {
   const s = CATEGORY_STYLES[cat];
@@ -192,25 +453,109 @@ function Tag({ cat }) {
   );
 }
 
-function HeartButton({ isFav, onToggleFav }) {
+function WhatsAppIcon() {
   return (
-    <button
-      onClick={onToggleFav}
-      aria-label={isFav ? "Remover dos favoritos" : "Salvar nos favoritos"}
-      style={{
-        border: "none", background: "none", cursor: "pointer", padding: 4,
-        flexShrink: 0, fontSize: 18, color: isFav ? "var(--color-accent)" : "var(--color-neutral-400)",
-      }}
+    <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <line x1="12" y1="1" x2="12" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }) {
+  return (
+    <svg
+      viewBox="0 0 24 24" width="21" height="21"
+      fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
     >
-      ♥
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+    </svg>
+  );
+}
+
+function IconButton({ label, onClick, href, active, children }) {
+  const style = {
+    border: "none", background: "none", cursor: "pointer", padding: 0,
+    flexShrink: 0, width: 34, height: 34, fontSize: 20, lineHeight: 1,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: active ? "var(--color-accent)" : "var(--color-neutral-400)",
+  };
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label} style={style}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button onClick={onClick} aria-label={label} title={label} style={style}>
+      {children}
     </button>
   );
 }
 
+function HeartButton({ isFav, onToggleFav }) {
+  return (
+    <IconButton
+      label={isFav ? "Remover dos favoritos" : "Salvar nos favoritos"}
+      onClick={onToggleFav}
+      active={isFav}
+    >
+      <HeartIcon filled={isFav} />
+    </IconButton>
+  );
+}
+
 function Card({ ev, dateOrPeriod, isPeriod, isFav, onToggleFav }) {
+  const today = isEventToday(ev, isPeriod);
+  const ranges = getEventDateRanges(ev, isPeriod);
+  const canAddToCalendar = !!ranges;
+
+  const handleAddToCalendar = () => {
+    const ics = buildICS(ev, ranges);
+    downloadICS(`${ev.id}.ics`, ics);
+  };
+
   return (
     <div style={{
       borderBottom: "2px solid var(--color-divider)", padding: "20px 0",
+      borderLeft: today ? "3px solid var(--color-accent)" : "3px solid transparent",
+      paddingLeft: today ? 9 : 0,
       display: "flex", gap: 12,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -219,6 +564,14 @@ function Card({ ev, dateOrPeriod, isPeriod, isFav, onToggleFav }) {
           {!isPeriod && (
             <span style={{ fontSize: 11, letterSpacing: "0.05em", color: "var(--color-neutral-700)", textTransform: "uppercase" }}>
               {dateOrPeriod}
+            </span>
+          )}
+          {today && (
+            <span style={{
+              fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 10.5, letterSpacing: "0.06em",
+              textTransform: "uppercase", padding: "3px 8px", background: "var(--color-accent)", color: "#fff",
+            }}>
+              Hoje
             </span>
           )}
         </div>
@@ -234,17 +587,121 @@ function Card({ ev, dateOrPeriod, isPeriod, isFav, onToggleFav }) {
           </div>
         )}
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "var(--color-neutral-900)" }}>{ev.desc}</p>
+        {ev.url && (
+          <div style={{ marginTop: 8 }}>
+            <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700 }}>
+              Ver página do evento ↗
+            </a>
+          </div>
+        )}
       </div>
-      <HeartButton isFav={isFav} onToggleFav={onToggleFav} />
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 10, flexShrink: 0, width: 34,
+      }}>
+        <HeartButton isFav={isFav} onToggleFav={onToggleFav} />
+        <IconButton label="Compartilhar no WhatsApp" href={buildWhatsAppShareUrl(ev, dateOrPeriod)}>
+          <WhatsAppIcon />
+        </IconButton>
+        {canAddToCalendar && (
+          <IconButton label="Adicionar ao calendário" onClick={handleAddToCalendar}>
+            <CalendarIcon />
+          </IconButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FilterBar({ selectedCats, toggleCat, selectedVenue, setSelectedVenue, venues, hasActiveFilters, clearFilters }) {
+  return (
+    <div style={{ padding: "16px 0 4px", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+      {Object.entries(CATEGORY_STYLES).map(([key, s]) => {
+        const active = selectedCats.has(key);
+        return (
+          <button
+            key={key}
+            onClick={() => toggleCat(key)}
+            style={{
+              fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 10.5, letterSpacing: "0.06em",
+              textTransform: "uppercase", padding: "6px 10px", cursor: "pointer",
+              border: `1.5px solid ${active ? "var(--color-accent)" : "var(--color-divider)"}`,
+              background: active ? "var(--color-accent)" : "none",
+              color: active ? "#fff" : "var(--color-neutral-700)",
+            }}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+      <select
+        value={selectedVenue}
+        onChange={(e) => setSelectedVenue(e.target.value)}
+        aria-label="Filtrar por local"
+        style={{
+          fontFamily: "var(--font-body)", fontSize: 12.5, padding: "6px 8px",
+          border: "1.5px solid var(--color-divider)", background: "var(--color-bg)",
+          color: "var(--color-text)", cursor: "pointer", maxWidth: 220,
+        }}
+      >
+        <option value="">Todos os locais</option>
+        {venues.map((v) => (
+          <option key={v} value={v}>{v}</option>
+        ))}
+      </select>
+      {hasActiveFilters && (
+        <button
+          onClick={clearFilters}
+          style={{ fontSize: 12, color: "var(--color-accent-700)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: "6px 2px" }}
+        >
+          Limpar filtros
+        </button>
+      )}
+    </div>
+  );
+}
+
+function EmptyFilterState() {
+  return (
+    <div style={{ textAlign: "center", padding: "48px 20px" }}>
+      <p style={{ fontSize: 13, color: "var(--color-neutral-700)" }}>Nenhum evento encontrado com esses filtros.</p>
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <div style={{ borderTop: "2px solid var(--color-divider)", marginTop: 24 }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px 40px" }}>
+        <p style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-neutral-700)", margin: 0 }}>
+          As informações desta agenda são compiladas com o apoio de inteligência artificial a partir de fontes
+          públicas e podem conter imprecisões ou ficar desatualizadas. Confirme datas, horários, valores e
+          disponibilidade diretamente com o local antes de ir.
+        </p>
+      </div>
     </div>
   );
 }
 
 function App() {
-  const [weekIdx, setWeekIdx] = useState(0);
+  // Semanas totalmente encerradas somem da navegação; se por algum motivo
+  // isso zerasse a lista, cai de volta em WEEKS inteiro (nunca fica sem semana).
+  const visibleWeeksRaw = WEEKS.filter((w) => !hasWeekEnded(w));
+  const visibleWeeks = visibleWeeksRaw.length > 0 ? visibleWeeksRaw : WEEKS;
+
+  const [weekIdx, setWeekIdx] = useState(() => getCurrentWeekIndex(visibleWeeks));
   const [view, setView] = useState("semana");
   const [favorites, setFavorites] = useState(new Set());
   const [loaded, setLoaded] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    try {
+      return document.documentElement.getAttribute("data-theme") || "light";
+    } catch (e) {
+      return "light";
+    }
+  });
+  const [selectedCats, setSelectedCats] = useState(new Set());
+  const [selectedVenue, setSelectedVenue] = useState("");
 
   useEffect(() => {
     try {
@@ -257,6 +714,15 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      localStorage.setItem("agenda-cultural:tema", theme);
+    } catch (e) {
+      // segue sem salvar preferência
+    }
+  }, [theme]);
+
   const toggleFav = (id) => {
     const next = new Set(favorites);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -268,9 +734,37 @@ function App() {
     }
   };
 
+  const toggleCat = (cat) => {
+    const next = new Set(selectedCats);
+    next.has(cat) ? next.delete(cat) : next.add(cat);
+    setSelectedCats(next);
+  };
+
+  const venues = useMemo(
+    () => [...new Set(ALL_LIST_EVENTS.map((e) => e.venue))].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    []
+  );
+
+  const matchesFilters = (ev) => {
+    if (selectedCats.size > 0 && !selectedCats.has(ev.cat)) return false;
+    if (selectedVenue && ev.venue !== selectedVenue) return false;
+    return true;
+  };
+  const hasActiveFilters = selectedCats.size > 0 || selectedVenue !== "";
+  const clearFilters = () => {
+    setSelectedCats(new Set());
+    setSelectedVenue("");
+  };
+
   const highlights = useMemo(() => ALL_LIST_EVENTS.filter((e) => e.highlight), []);
   const favEvents = useMemo(() => ALL_LIST_EVENTS.filter((e) => favorites.has(e.id)), [favorites]);
-  const currentWeek = WEEKS[weekIdx];
+  const currentWeek = visibleWeeks[Math.min(weekIdx, visibleWeeks.length - 1)];
+  // Eventos já encerrados somem de Semanas/Em Cartaz/Destaques. Em Favoritos
+  // não escondemos nada — é a lista pessoal do usuário, não um feed do mês.
+  const currentWeekEvents = currentWeek.events.filter(matchesFilters).filter((ev) => !hasEventEndedGeneric(ev));
+  const ongoingFiltered = ONGOING.filter(matchesFilters).filter((ev) => !hasEventEndedGeneric(ev));
+  const highlightsFiltered = highlights.filter(matchesFilters).filter((ev) => !hasEventEndedGeneric(ev));
+  const favEventsFiltered = favEvents.filter(matchesFilters);
 
   const tabs = [
     { key: "semana", label: "Semanas" },
@@ -281,29 +775,29 @@ function App() {
 
   return (
     <div style={{ minHeight: "100vh", fontFamily: "var(--font-body)", background: "var(--color-bg)", color: "var(--color-text)" }}>
-      {/* HEADER */}
-      <div style={{ background: "var(--color-neutral-900)", padding: "32px 20px 16px" }}>
+      {/* HEADER — identidade fixa (grafite/claro), não muda com o tema */}
+      <div style={{ background: "var(--color-header-bg)", padding: "32px 20px 16px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, borderBottom: "2px solid var(--color-bg)", paddingBottom: 12 }}>
-            <h1 style={{ fontSize: "clamp(30px, 5vw, 52px)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.01em", color: "var(--color-bg)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", flexWrap: "wrap", gap: 8, borderBottom: "2px solid var(--color-header-divider)", paddingBottom: 12 }}>
+            <h1 style={{ fontSize: "clamp(30px, 5vw, 52px)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.01em", color: "var(--color-header-text)" }}>
               Agenda Cultural
             </h1>
-            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, color: "var(--color-accent-400)", fontSize: 13, letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, color: "var(--color-header-accent)", fontSize: 13, letterSpacing: "0.14em", textTransform: "uppercase" }}>
               Centro de São Paulo
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, paddingTop: 12 }}>
-            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-neutral-200)", fontSize: 14 }}>
+            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-header-subtle)", fontSize: 14 }}>
               {MONTH_LABEL} de {YEAR_LABEL}
             </div>
-            <div style={{ fontSize: 12, color: "var(--color-neutral-400)" }}>Atualizado em {LAST_UPDATED}</div>
+            <div style={{ fontSize: 12, color: "var(--color-header-muted)" }}>Atualizado em {LAST_UPDATED}</div>
           </div>
         </div>
       </div>
 
       {/* TABS */}
       <div style={{ borderBottom: "2px solid var(--color-divider)", position: "sticky", top: 0, zIndex: 10, background: "var(--color-bg)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", overflowX: "auto" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "stretch", overflowX: "auto" }}>
           {tabs.map((t) => (
             <button key={t.key} onClick={() => setView(t.key)} style={{
               flex: "1", minWidth: 110, padding: "14px 10px", fontFamily: "var(--font-heading)",
@@ -315,11 +809,32 @@ function App() {
               {t.label}
             </button>
           ))}
+          <button
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            title={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            style={{
+              flex: "0 0 auto", width: 46, padding: "14px 10px",
+              border: "none", background: "none", cursor: "pointer", borderBottom: "2px solid transparent",
+              color: "var(--color-neutral-700)", display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </button>
         </div>
       </div>
 
       {/* CONTENT */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px 64px" }}>
+        <FilterBar
+          selectedCats={selectedCats}
+          toggleCat={toggleCat}
+          selectedVenue={selectedVenue}
+          setSelectedVenue={setSelectedVenue}
+          venues={venues}
+          hasActiveFilters={hasActiveFilters}
+          clearFilters={clearFilters}
+        />
         {view === "semana" && (
           <React.Fragment>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "24px 0 16px" }}>
@@ -328,35 +843,22 @@ function App() {
                 ←
               </button>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-heading)", fontWeight: 800, textTransform: "uppercase", fontSize: 22 }}>{currentWeek.label}</div>
+                <div style={{ fontFamily: "var(--font-heading)", fontWeight: 800, textTransform: "uppercase", fontSize: 22 }}>
+                  {currentWeek.events.some((ev) => isEventToday(ev, false)) ? "Essa semana" : "O que vem por aí"}
+                </div>
                 <div style={{ fontSize: 12, color: "var(--color-neutral-700)" }}>{currentWeek.range}</div>
               </div>
-              <button onClick={() => setWeekIdx((i) => Math.min(WEEKS.length - 1, i + 1))} disabled={weekIdx === WEEKS.length - 1}
-                style={{ border: "2px solid var(--color-divider)", background: "none", width: 36, height: 36, fontSize: 16, cursor: "pointer", color: "var(--color-text)", opacity: weekIdx === WEEKS.length - 1 ? 0.3 : 1 }}>
+              <button onClick={() => setWeekIdx((i) => Math.min(visibleWeeks.length - 1, i + 1))} disabled={weekIdx === visibleWeeks.length - 1}
+                style={{ border: "2px solid var(--color-divider)", background: "none", width: 36, height: 36, fontSize: 16, cursor: "pointer", color: "var(--color-text)", opacity: weekIdx === visibleWeeks.length - 1 ? 0.3 : 1 }}>
                 →
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
-              {currentWeek.events.map((ev) => (
-                <Card key={ev.id} ev={ev} dateOrPeriod={ev.date} isPeriod={false} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
-              ))}
-            </div>
-            {weekIdx === WEEKS.length - 1 && (
-              <div style={{ marginTop: 28, border: "2px solid var(--color-divider)", padding: 20 }}>
-                <div style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--color-neutral-700)", marginBottom: 12 }}>
-                  Fique de olho — sem agenda confirmada
-                </div>
-                {WATCHLIST.map((w) => (
-                  <div key={w.name} style={{ fontSize: 13, marginBottom: 8, lineHeight: 1.5 }}>
-                    <span style={{ fontWeight: 700 }}>{w.name}: </span>
-                    <span style={{ color: "var(--color-neutral-700)" }}>{w.note}</span>
-                    {w.url && (
-                      <React.Fragment>
-                        {" "}
-                        <a href={w.url} target="_blank" rel="noopener noreferrer">Ver site ↗</a>
-                      </React.Fragment>
-                    )}
-                  </div>
+            {currentWeekEvents.length === 0 ? (
+              <EmptyFilterState />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+                {currentWeekEvents.map((ev) => (
+                  <Card key={ev.id} ev={ev} dateOrPeriod={ev.date} isPeriod={false} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
                 ))}
               </div>
             )}
@@ -368,11 +870,15 @@ function App() {
             <p style={{ fontSize: 12, color: "var(--color-neutral-700)", padding: "20px 0 4px" }}>
               Exposições, peças e agendas contínuas que seguem por mais de uma semana.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
-              {ONGOING.map((ev) => (
-                <Card key={ev.id} ev={ev} dateOrPeriod={ev.period} isPeriod={true} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
-              ))}
-            </div>
+            {ongoingFiltered.length === 0 ? (
+              <EmptyFilterState />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+                {ongoingFiltered.map((ev) => (
+                  <Card key={ev.id} ev={ev} dateOrPeriod={ev.period} isPeriod={true} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -381,11 +887,15 @@ function App() {
             <p style={{ fontSize: 12, color: "var(--color-neutral-700)", padding: "20px 0 4px" }}>
               O que não perder este mês, em qualquer semana.
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
-              {highlights.map((ev) => (
-                <Card key={ev.id} ev={ev} dateOrPeriod={ev.date || ev.period} isPeriod={!ev.date} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
-              ))}
-            </div>
+            {highlightsFiltered.length === 0 ? (
+              <EmptyFilterState />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px" }}>
+                {highlightsFiltered.map((ev) => (
+                  <Card key={ev.id} ev={ev} dateOrPeriod={ev.date || ev.period} isPeriod={!ev.date} isFav={favorites.has(ev.id)} onToggleFav={() => toggleFav(ev.id)} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -398,9 +908,11 @@ function App() {
                 <div style={{ fontSize: 32, color: "var(--color-neutral-400)", marginBottom: 8 }}>♡</div>
                 <p style={{ fontSize: 13, color: "var(--color-neutral-700)" }}>Toque no coração de um evento para salvá-lo aqui.</p>
               </div>
+            ) : favEventsFiltered.length === 0 ? (
+              <EmptyFilterState />
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "0 32px", paddingTop: 20 }}>
-                {favEvents.map((ev) => (
+                {favEventsFiltered.map((ev) => (
                   <Card key={ev.id} ev={ev} dateOrPeriod={ev.date || ev.period} isPeriod={!ev.date} isFav={true} onToggleFav={() => toggleFav(ev.id)} />
                 ))}
               </div>
@@ -408,6 +920,7 @@ function App() {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 }
