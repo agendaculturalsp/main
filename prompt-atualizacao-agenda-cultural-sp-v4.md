@@ -1,14 +1,13 @@
 # Prompt-mestre: Atualização do app Agenda Cultural SP
 
 > Cole este prompt inteiro sempre que pedir uma atualização. Reescreve o bloco de
-> dados do **`agenda-cultural-sp.html`** — o arquivo standalone publicado no
-> Netlify (não o artifact `.jsx` de versões anteriores, que ficou defasado
-> assim que passamos a publicar fora do Claude.ai). Sem quebrar favoritos
-> salvos (os `id` de eventos que continuam válidos não podem mudar).
+> dados do **`index.html`** — o arquivo standalone publicado via GitHub Pages
+> a partir deste repositório (não o artifact `.jsx` de versões anteriores, que
+> ficou defasado assim que passamos a publicar fora do Claude.ai). Sem quebrar
+> favoritos salvos (os `id` de eventos que continuam válidos não podem mudar).
 >
-> Ao final, o arquivo atualizado deve ser entregue pronto pra arrastar de
-> novo no Netlify Drop (ou, se GitHub/Replit estiver conectado naquele
-> momento, publicado direto).
+> Ao final, o arquivo atualizado deve ser entregue pronto pra commitar e dar
+> push neste repositório — o GitHub Pages publica a versão nova a partir daí.
 
 ---
 
